@@ -15,8 +15,12 @@ public class RetryController {
   @RequestMapping(value="/")
   public void retry() {
     retryService.setService("ANAV");
+    retryService.setDelay("1500");
+    retryService.setMaxAttempts("2");
     System.out.println("===>"+retryService.testRetry());
     retryService.setService("RULES");
+    retryService.setDelay("3000");
+    retryService.setMaxAttempts("3");
     System.out.println("===>"+retryService.testRetry());
     
   }

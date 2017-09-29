@@ -11,5 +11,7 @@ import org.springframework.stereotype.Component;
 @Retention(RetentionPolicy.RUNTIME)
 @Component
 public @interface RetryTest {
-  String value() default "";
+  String service() default "";
+  String delay() default "1000";
+  String maxAttempts() default "3";
 }

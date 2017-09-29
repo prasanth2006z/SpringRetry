@@ -41,26 +41,29 @@ public class RetryAspect {
   private String responseString;
   
   //not fully generic..need to work on it.
-  private String executeSpringExpression(ProceedingJoinPoint joinPoint) {
+  private Map<String,String> executeSpringExpression(ProceedingJoinPoint joinPoint) {
     MethodSignature signature = (MethodSignature) joinPoint.getSignature();
     Method method=signature.getMethod();
     RetryTest retryTest = method.getAnnotation(RetryTest.class);
-    String value=retryTest.value();
     ExpressionParser parser = new SpelExpressionParser();
     StandardEvaluationContext context = new StandardEvaluationContext();
     context.setRootObject(applicationContext.getAutowireCapableBeanFactory());
     context.setBeanResolver(new BeanFactoryResolver(applicationContext.getAutowireCapableBeanFactory()));
     context.addPropertyAccessor(new BeanExpressionContextAccessor());
-    Expression expression = parser.parseExpression(value);
-    return expression.getValue(context,String.class);
+    
+    Map<String,String> map=new HashMap<String, String>();
+    map.put("service", parser.parseExpression(retryTest.service()).getValue(context,String.class));
+    map.put("delay", parser.parseExpression(retryTest.delay()).getValue(context,String.class));
+    map.put("maxAttempts", parser.parseExpression(retryTest.maxAttempts()).getValue(context,String.class));
+    return map;
   }
 
   @Around("@annotation(retryTest)")
   public Object logExecutionTime(ProceedingJoinPoint jp,RetryTest retryTest) throws Throwable {
     System.out.println("starting..");
     joinPoint=jp;
-    String service=executeSpringExpression(joinPoint);
-    RetryTemplate retryTemplate=configureRetryTemplate(service);
+    
+    RetryTemplate retryTemplate=configureRetryTemplate(executeSpringExpression(joinPoint));
     retry(retryTemplate);
     return new String("sss");
   }
@@ -83,17 +86,18 @@ public class RetryAspect {
     return responseString;
   }
 
-  private RetryTemplate configureRetryTemplate(String service) {
+  private RetryTemplate configureRetryTemplate(Map<String,String> map) {
     Map<Class<? extends Throwable>, Boolean> recoverExcpetionMap=new HashMap<Class<? extends Throwable>, Boolean>();
     recoverExcpetionMap.put(NullPointerException.class, true);
     SimpleRetryPolicy retryPolicy=null;
-    if(service.equals("ANAV")) {
-      retryPolicy = new SimpleRetryPolicy(2,recoverExcpetionMap);  
+    
+    if(map.get("service").equals("ANAV")) {
+      retryPolicy = new SimpleRetryPolicy(Integer.parseInt(map.get("maxAttempts")),recoverExcpetionMap);  
     }else {
-      retryPolicy = new SimpleRetryPolicy(3,recoverExcpetionMap);
+      retryPolicy = new SimpleRetryPolicy(Integer.parseInt(map.get("maxAttempts")),recoverExcpetionMap);
     }
     FixedBackOffPolicy backOffPolicy = new FixedBackOffPolicy();
-    backOffPolicy.setBackOffPeriod(1500); // 1.5 seconds
+    backOffPolicy.setBackOffPeriod(Long.parseLong(map.get("delay"))); // 1.5 seconds
     RetryTemplate template = new RetryTemplate();
     template.setRetryPolicy(retryPolicy);
     template.setBackOffPolicy(backOffPolicy);
