@@ -97,7 +97,7 @@ public class RetryAspect {
       retryPolicy = new SimpleRetryPolicy(Integer.parseInt(map.get("maxAttempts")),recoverExcpetionMap);
     }
     FixedBackOffPolicy backOffPolicy = new FixedBackOffPolicy();
-    backOffPolicy.setBackOffPeriod(Long.parseLong(map.get("delay"))); // 1.5 seconds
+    backOffPolicy.setBackOffPeriod(Long.parseLong(map.get("delay")));
     RetryTemplate template = new RetryTemplate();
     template.setRetryPolicy(retryPolicy);
     template.setBackOffPolicy(backOffPolicy);
